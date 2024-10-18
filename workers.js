@@ -7,11 +7,13 @@ addEventListener('fetch', event => {
 })
 
 async function handleRequest(request) {
+	const today = new Date();
     const url = new URL(request.url);
     const meal = url.searchParams.get('meal') || 'Lunch'; //default to lunch
+    const date = url.searchParams.get('date') || `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`
 
     try {
-        const menu = await parseMenuWithCategories(meal);
+        const menu = await parseMenuWithCategories(meal, date);
         return new Response(JSON.stringify(menu), {
             headers: { 'Content-Type': 'application/json' }
         });
@@ -20,17 +22,17 @@ async function handleRequest(request) {
     }
 }
 
-async function getMenu(meal) {
-    const today = new Date();
-    const formattedDate = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear().toString().slice(-2)}`;
+async function getMenu(meal, date) {
    
     const response = await fetch('https://www.absecom.psu.edu/menus/user-pages/daily-menu.cfm', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: `selMenuDate=${encodeURIComponent(formattedDate)}&selMeal=${meal}&selCampus=46`
+        body: `selMenuDate=${encodeURIComponent(date)}&selMeal=${meal}&selCampus=46`
     });
+
+	console.log(`selMenuDate=${encodeURIComponent(date)}&selMeal=${meal}&selCampus=46`)
 
     if (!response.ok) {
         throw new Error('Error fetching menu');
@@ -39,8 +41,8 @@ async function getMenu(meal) {
     return response.text();
 }
 
-async function parseMenuWithCategories(meal) {
-    const html = await getMenu(meal);
+async function parseMenuWithCategories(meal, date) {
+    const html = await getMenu(meal, date);
     const $ = cheerio.load(html);
     const menu = [];
 
